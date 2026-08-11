@@ -1,22 +1,46 @@
-# Binaries
+# Compiled binaries
 /bin/
 /dist/
 /build/
 server
+opsnexus-backend
 
-# Go
+# Go build/test artifacts
 *.test
 *.out
+*.exe
 coverage.out
+coverage.html
+*.prof
+*.pprof
 
-# Environment
+# Dependency cache (if vendored locally)
+/vendor/
+
+# Environment & secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.crt
 
-# IDE
+# Database
+*.sql.bak
+*.dump
+
+# Logs
+*.log
+logs/
+tmp/
+
+# IDE & editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
