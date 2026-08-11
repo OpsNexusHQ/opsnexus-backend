@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OpsNexusHQ/opsnexus-backend/internal/alerting"
+	"github.com/OpsNexusHQ/opsnexus-backend/internal/events"
 	"github.com/OpsNexusHQ/opsnexus-common/models"
 	"github.com/jackc/pgx/v5"
 )
@@ -24,6 +26,8 @@ type TelemetryStore interface {
 // Handler handles telemetry HTTP requests.
 type Handler struct {
 	repository TelemetryStore
+	hub        *events.Hub
+	engine     *alerting.Engine
 }
 
 // NewHandler creates a telemetry handler.
@@ -31,6 +35,16 @@ func NewHandler(repository TelemetryStore) *Handler {
 	return &Handler{
 		repository: repository,
 	}
+}
+
+func (h *Handler) WithEvents(hub *events.Hub) *Handler {
+	h.hub = hub
+	return h
+}
+
+func (h *Handler) WithAlerting(engine *alerting.Engine) *Handler {
+	h.engine = engine
+	return h
 }
 
 // Ingest accepts telemetry reported by an OpsNexus agent.
@@ -66,6 +80,20 @@ func (h *Handler) persistTelemetry(w http.ResponseWriter, r *http.Request, paylo
 	if err := h.repository.Store(ctx, payload); err != nil {
 		h.sendError(w, "failed to store telemetry", http.StatusInternalServerError)
 		return
+	}
+
+	// Async non-blocking SSE broadcast and alert evaluation
+	if h.hub != nil {
+		h.hub.Publish(events.Event{
+			Type:      events.EventTelemetryUpdated,
+			AgentID:   payload.AgentID,
+			Timestamp: payload.Timestamp,
+			Metrics:   payload.Metrics,
+		})
+	}
+
+	if h.engine != nil {
+		go h.engine.EvaluateTelemetry(context.Background(), payload)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -284,5 +312,9 @@ func (h *Handler) IngestForAgent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendError(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"error": map[string]string{
+			"message": message,
+		},
+	})
 }

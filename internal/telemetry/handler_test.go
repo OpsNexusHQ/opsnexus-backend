@@ -253,44 +253,44 @@ func TestTelemetryHandlerIngestForAgent(t *testing.T) {
 		}
 	})
 
-		t.Run("accepts full network and processes payload", func(t *testing.T) {
-			called := false
-			store.storeFunc = func(ctx context.Context, telemetry models.AgentTelemetry) error {
-				called = true
-				net, ok := telemetry.Metrics["system"].(map[string]any)["network"]
-				if !ok {
-					t.Fatal("expected network data to be present in metrics")
-				}
-				proc, ok := telemetry.Metrics["system"].(map[string]any)["processes"]
-				if !ok {
-					t.Fatal("expected processes data to be present in metrics")
-				}
-				if net == nil {
-					t.Fatal("expected non-nil network payload")
-				}
-				if proc == nil {
-					t.Fatal("expected non-nil processes payload")
-				}
-				return nil
+	t.Run("accepts full network and processes payload", func(t *testing.T) {
+		called := false
+		store.storeFunc = func(ctx context.Context, telemetry models.AgentTelemetry) error {
+			called = true
+			net, ok := telemetry.Metrics["system"].(map[string]any)["network"]
+			if !ok {
+				t.Fatal("expected network data to be present in metrics")
 			}
-
-			payload := `{"agent_id":"agent-1","timestamp":"2026-08-08T18:00:00Z","metrics":{"system":{"network":{"interfaces":[{"name":"eth0","bytes_sent":100}]},"processes":{"running_count":200}}}}`
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/agents/agent-1/telemetry", strings.NewReader(payload))
-			req.SetPathValue("id", "agent-1")
-			req.Header.Set("Content-Type", "application/json")
-			rr := httptest.NewRecorder()
-
-			handler.IngestForAgent(rr, req)
-
-			if rr.Code != http.StatusCreated {
-				t.Errorf("expected status 201, got %d", rr.Code)
+			proc, ok := telemetry.Metrics["system"].(map[string]any)["processes"]
+			if !ok {
+				t.Fatal("expected processes data to be present in metrics")
 			}
-			if !called {
-				t.Fatal("expected store func to be called")
+			if net == nil {
+				t.Fatal("expected non-nil network payload")
 			}
-		})
+			if proc == nil {
+				t.Fatal("expected non-nil processes payload")
+			}
+			return nil
+		}
 
-		t.Run("invalid path agent_id", func(t *testing.T) {
+		payload := `{"agent_id":"agent-1","timestamp":"2026-08-08T18:00:00Z","metrics":{"system":{"network":{"interfaces":[{"name":"eth0","bytes_sent":100}]},"processes":{"running_count":200}}}}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/agents/agent-1/telemetry", strings.NewReader(payload))
+		req.SetPathValue("id", "agent-1")
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		handler.IngestForAgent(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Errorf("expected status 201, got %d", rr.Code)
+		}
+		if !called {
+			t.Fatal("expected store func to be called")
+		}
+	})
+
+	t.Run("invalid path agent_id", func(t *testing.T) {
 		payload := `{"agent_id":"agent-1","timestamp":"2026-08-08T18:00:00Z","metrics":{"cpu":10.5}}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/agents/agent-2/telemetry", strings.NewReader(payload))
 		req.SetPathValue("id", "agent-2")

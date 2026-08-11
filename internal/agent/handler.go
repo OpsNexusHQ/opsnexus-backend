@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/OpsNexusHQ/opsnexus-backend/internal/events"
 	"github.com/OpsNexusHQ/opsnexus-common/models"
 	"github.com/jackc/pgx/v5"
 )
@@ -20,6 +22,7 @@ type AgentStore interface {
 // Handler handles agent HTTP requests.
 type Handler struct {
 	repository AgentStore
+	hub        *events.Hub
 }
 
 // NewHandler creates an agent HTTP handler.
@@ -27,6 +30,11 @@ func NewHandler(repository AgentStore) *Handler {
 	return &Handler{
 		repository: repository,
 	}
+}
+
+func (h *Handler) WithEvents(hub *events.Hub) *Handler {
+	h.hub = hub
+	return h
 }
 
 // Register handles POST /api/v1/agents/register.
@@ -60,6 +68,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.sendError(w, "failed to register agent", http.StatusInternalServerError)
 		return
+	}
+
+	if h.hub != nil {
+		h.hub.Publish(events.Event{
+			Type:      events.EventAgentRegistered,
+			AgentID:   agent.ID,
+			Timestamp: time.Now(),
+			Data:      agent,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
