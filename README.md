@@ -75,7 +75,7 @@ The backend ingests periodic system metrics from Linux agents, persists telemetr
 ### Local Run
 ```bash
 # 1. Clone & Navigate
-git clone https.github.com/OpsNexusHQ/opsnexus-backend.git
+git clone https://github.com/OpsNexusHQ/opsnexus-backend.git
 cd opsnexus-backend
 
 # 2. Set Database Connection
