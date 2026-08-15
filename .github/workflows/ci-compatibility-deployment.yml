@@ -15,4 +15,4 @@ jobs:
     with:
       pr_repo: opsnexus-backend
       pr_sha: ${{ github.event.pull_request.head.sha || github.sha }}
-      base_manifest_sha: ${{ github.event.pull_request.base.sha || github.sha }}
+      base_manifest_sha: b54bde59f0e4c581e1362c520882730040e90b1d # immutable opsnexus-docs main manifest baseline
