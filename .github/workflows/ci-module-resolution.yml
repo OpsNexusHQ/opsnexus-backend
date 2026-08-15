@@ -1,0 +1,52 @@
+# Temporary OPS-5 diagnostic. Remove after the Go module migration is resolved.
+name: Go module resolution diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  module-resolution:
+    name: ci/module-resolution
+    runs-on: ubuntu-latest
+    env:
+      GOPROXY: https://proxy.golang.org,direct
+      GOSUMDB: sum.golang.org
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up declared Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Print Go and module settings
+        run: |
+          go version
+          go env GOPROXY
+          go env GOSUMDB
+
+      - name: Download and verify common v0.5.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata="$(mktemp)"
+          trap 'rm -f "$metadata"' EXIT
+
+          go mod download -json github.com/OpsNexusHQ/opsnexus-common@v0.5.0 | tee "$metadata"
+          go mod download -json github.com/OpsNexusHQ/opsnexus-common@v0.5.0 | tee "$metadata"
+
+          jq -e '
+            .Path == "github.com/OpsNexusHQ/opsnexus-common" and
+            .Version == "v0.5.0"
+          ' "$metadata"
+
+          echo "Resolved module cache metadata:"
+          jq '{Path, Version, Info, GoMod, Zip, Dir, Sum, GoModSum}' "$metadata"
