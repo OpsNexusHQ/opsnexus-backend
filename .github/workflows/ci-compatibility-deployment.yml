@@ -11,7 +11,8 @@ permissions:
 jobs:
   compatibility-deployment:
     name: ci/compatibility-deployment
-    uses: OpsNexusHQ/opsnexus-deployment/.github/workflows/ci-compatibility-deployment.yml@main
+    uses: OpsNexusHQ/opsnexus-deployment/.github/workflows/ci-compatibility-deployment.yml@09fa80119f293b2dffe508a957c3a5f99b75509b
     with:
       pr_repo: opsnexus-backend
       pr_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+      base_manifest_sha: f692608bfe837f19625cc4f7208aee70c1fdfc43
