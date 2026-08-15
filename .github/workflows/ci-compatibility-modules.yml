@@ -1,0 +1,49 @@
+name: Compatibility Modules
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - go.mod
+      - go.sum
+      - '**/*.go'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  COMMON_SHA: b571c0a7ae028906d08cf108e357350dda9384d7
+  COMMON_VERSION: v0.5.0
+
+jobs:
+  compatibility-modules:
+    name: ci/compatibility-modules
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+      - name: Print selected relationship
+        run: |
+          echo "component=opsnexus-backend version=$(sed -n 's/^go \(.*\)$/\1/p' go.mod | head -1)"
+          echo "common=github.com/OpsNexusHQ/opsnexus-common ${COMMON_VERSION} commit=${COMMON_SHA}"
+      - name: Validate selected common revision and module strategy
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote https://github.com/OpsNexusHQ/opsnexus-common.git "$COMMON_SHA" | awk '{print $1}')" = "$COMMON_SHA"
+          grep -Eq '^require github.com/OpsNexusHQ/opsnexus-common v0\.5\.0$' go.mod
+          ! grep -Eq '^replace .*opsnexus-common.*=>[[:space:]]*\.\.' go.mod
+      - name: Validate selected common module
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GOSUMDB: sum.golang.org
+        run: |
+          go list -m all
+          go mod verify
+          go test ./...
